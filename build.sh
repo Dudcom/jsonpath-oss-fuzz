@@ -188,7 +188,7 @@ if [ -f "$OUT/jsonpath_fuzzer" ]; then
     ls -la $OUT/lib/ || echo "No additional libraries"
     
 else
-    echo "❌ ERROR: Failed to create fuzzer binary!"
+    echo "Failed to create fuzzer binary!"
     exit 1
 fi
 
