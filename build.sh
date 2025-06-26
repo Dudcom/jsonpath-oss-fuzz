@@ -196,11 +196,5 @@ fi
 echo "Cleaning up..."
 rm -f *.o
 
-echo "✅ JSONPath fuzzer build completed successfully!"
+echo "fuzzer build completed successfully!"
 echo "Fuzzer: $OUT/jsonpath_fuzzer"
-echo ""
-echo "This fuzzer tests:"
-echo "  - jp_parse() function with malformed JSONPath expressions"
-echo "  - jp_get_token() function with various token inputs"  
-echo "  - jp_match() function with parsed expressions and JSON data"
-echo "  - Full pipeline integration testing"
