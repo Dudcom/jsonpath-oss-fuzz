@@ -41,10 +41,10 @@
 %syntax_error {
 	int i;
 
-	for (i = 0; i < sizeof(tokennames) / sizeof(tokennames[0]); i++)
-		if (yy_find_shift_action(yypParser, (YYCODETYPE)i) < YYNSTATE + YYNRULE)
-			s->error_code |= (1 << i);
-
+//	for (i = 0; i < sizeof(tokennames) / sizeof(tokennames[0]); i++)
+//		if (i < YYNTOKEN && yy_find_shift_action(yypParser, (YYCODETYPE)i) < YYNSTATE + YYNRULE)
+//			s->error_code |= (1 << i);
+	s->error_code = 1;
 	s->error_pos = s->off;
 }
 

@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <string.h>
+#include <limits.h>
 
 #ifdef JSONC
 	#include <json.h>
@@ -19,7 +20,9 @@
 
 #include "lexer.h"
 #include "parser.h"
+#ifndef NO_MATCHER
 #include "matcher.h" 
+#endif
 #include "ast.h"
 
 // Fuzzer modes to test different aspects
@@ -28,6 +31,18 @@
 #define MODE_PARSE_AND_MATCH  2
 #define MODE_FULL_PIPELINE    3
 #define MODE_JSON_PARSE       4
+
+#ifdef NO_MATCHER
+// Stub implementation for jp_match when matcher is not available
+typedef void (*jp_match_cb_t)(struct json_object *res, void *priv);
+
+struct json_object *
+jp_match(struct jp_opcode *path, struct json_object *jsobj,
+         jp_match_cb_t cb, void *priv) {
+    (void)path; (void)jsobj; (void)cb; (void)priv;
+    return NULL; // Stub implementation - just return NULL
+}
+#endif
 
 // Simple callback for jp_match testing
 static void fuzz_match_callback(struct json_object *res, void *priv) {
@@ -361,6 +376,42 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         case MODE_JSON_PARSE:
             fuzz_parse_json(fuzz_data, fuzz_size);
             break;
+    }
+    
+    return 0;
+}
+
+#ifndef __AFL_FUZZ_TESTCASE_LEN
+
+ssize_t fuzz_len;
+unsigned char fuzz_buf[1024000];
+
+#define __AFL_FUZZ_TESTCASE_LEN fuzz_len
+#define __AFL_FUZZ_TESTCASE_BUF fuzz_buf  
+#define __AFL_FUZZ_INIT() void sync(void);
+#define __AFL_LOOP(x) \
+    ((fuzz_len = read(0, fuzz_buf, sizeof(fuzz_buf))) > 0 ? 1 : 0)
+#define __AFL_INIT() sync()
+
+#endif
+
+__AFL_FUZZ_INIT();
+
+#pragma clang optimize off
+#pragma GCC optimize("O0")
+
+int main(int argc, char **argv)
+{
+    (void)argc; (void)argv; 
+    
+    ssize_t len;
+    unsigned char *buf;
+
+    __AFL_INIT();
+    buf = __AFL_FUZZ_TESTCASE_BUF;
+    while (__AFL_LOOP(INT_MAX)) {
+        len = __AFL_FUZZ_TESTCASE_LEN;
+        LLVMFuzzerTestOneInput(buf, (size_t)len);
     }
     
     return 0;
