@@ -326,7 +326,11 @@ static void fuzz_parse_json(const uint8_t *data, size_t size) {
                 }
             }
         }
-        
+    }
+    
+    // Always clean up the result object to prevent memory leaks
+    if (result)
+    {
         json_object_put(result);
     }
 }

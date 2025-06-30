@@ -506,6 +506,7 @@ struct jp_opcode *
 jp_get_token(struct jp_state *s, const char *input, int *mlen)
 {
 	struct jp_opcode op = { 0 };
+	struct jp_opcode *result;
 
 	*mlen = match_token(input, &op, s);
 
@@ -519,5 +520,11 @@ jp_get_token(struct jp_state *s, const char *input, int *mlen)
 		return NULL;
 	}
 
-	return jp_alloc_op(s, op.type, op.num, op.str, NULL);
+	result = jp_alloc_op(s, op.type, op.num, op.str, NULL);
+	
+	// Free the temporary string allocated by parse functions
+	if (op.str)
+		free(op.str);
+
+	return result;
 }

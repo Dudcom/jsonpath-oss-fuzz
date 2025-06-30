@@ -69,6 +69,9 @@ jp_free(struct jp_state *s)
 	for (op = s->pool; op;)
 	{
 		tmp = op->next;
+	// FIXED BUG IN MEMORY LEAK ts pmo icl this crap has to many bugs
+		if (op->str && (op->type == T_STRING || op->type == T_REGEXP || op->type == T_LABEL))
+			free(op->str);
 		free(op);
 		op = tmp;
 	}
