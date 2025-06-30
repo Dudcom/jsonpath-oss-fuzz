@@ -1,9 +1,5 @@
 #!/bin/bash -eu
-
-
 echo "Building JSONPath fuzzer..."
-
-# Update package list and install basic dependencies
 apt-get update
 apt-get install -y build-essential cmake pkg-config git libjson-c-dev patchelf lemon
 
