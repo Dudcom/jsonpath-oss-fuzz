@@ -188,19 +188,6 @@ if [ -f "$OUT/jsonpath_fuzzer" ]; then
     ls -la $OUT/lib/ || echo "No additional libraries"
     
 else
-    echo "❌ ERROR: Failed to create fuzzer binary!"
+    echo "ERROR: Failed to create fuzzer binary!"
     exit 1
 fi
-
-# Clean up build artifacts
-echo "Cleaning up..."
-rm -f *.o
-
-echo "✅ JSONPath fuzzer build completed successfully!"
-echo "Fuzzer: $OUT/jsonpath_fuzzer"
-echo ""
-echo "This fuzzer tests:"
-echo "  - jp_parse() function with malformed JSONPath expressions"
-echo "  - jp_get_token() function with various token inputs"  
-echo "  - jp_match() function with parsed expressions and JSON data"
-echo "  - Full pipeline integration testing"
