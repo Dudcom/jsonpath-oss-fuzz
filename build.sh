@@ -1,6 +1,6 @@
 #!/bin/bash -eu
 
-# JSONPath OSS-Fuzz Build Script
+
 echo "Building JSONPath fuzzer..."
 
 # Update package list and install basic dependencies
