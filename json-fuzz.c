@@ -27,6 +27,7 @@
 #define MODE_TOKEN_ONLY       1  
 #define MODE_PARSE_AND_MATCH  2
 #define MODE_FULL_PIPELINE    3
+#define MODE_JSON_PARSE       4
 
 // Simple callback for jp_match testing
 static void fuzz_match_callback(struct json_object *res, void *priv) {
@@ -209,11 +210,134 @@ static void fuzz_full_pipeline(const uint8_t *data, size_t size) {
     free(json_str);
 }
 
+// Helper function to parse JSON chunks (mimics parse_json_chunk from main.c)
+static struct json_object *
+fuzz_parse_json_chunk(struct json_tokener *tok, struct json_object *array,
+                      const char *buf, size_t len, enum json_tokener_error *err)
+{
+    struct json_object *obj = NULL;
+
+    while (len)
+    {
+        obj = json_tokener_parse_ex(tok, buf, len);
+        *err = json_tokener_get_error(tok);
+
+        if (*err == json_tokener_success)
+        {
+            if (array)
+            {
+                json_object_array_add(array, obj);
+            }
+            else
+            {
+                break;
+            }
+        }
+        else if (*err != json_tokener_continue)
+        {
+            break;
+        }
+
+        buf += tok->char_offset;
+        len -= tok->char_offset;
+    }
+
+    return obj;
+}
+
+// Test json parsing like parse_json function from main.c but using fuzzer input
+static void fuzz_parse_json(const uint8_t *data, size_t size) {
+    if (size <= 1 || size > 4096) return;
+    
+    // Use first byte to determine array_mode
+    bool array_mode = data[0] % 2;
+    const uint8_t *json_data = data + 1;
+    size_t json_size = size - 1;
+    
+    struct json_object *obj = NULL, *array = NULL;
+    struct json_tokener *tok = json_tokener_new();
+    enum json_tokener_error err = json_tokener_continue;
+    const char *error = NULL;
+
+    if (!tok)
+    {
+        return; // Out of memory
+    }
+
+    if (array_mode)
+    {
+        array = json_object_new_array();
+
+        if (!array)
+        {
+            json_tokener_free(tok);
+            return; // Out of memory
+        }
+    }
+
+    const char *buf = (const char *)json_data;
+    size_t remaining = json_size;
+    size_t chunk_size = 256; 
+    
+    while (remaining > 0)
+    {
+        size_t current_chunk = (remaining > chunk_size) ? chunk_size : remaining;
+        
+        obj = fuzz_parse_json_chunk(tok, array, buf, current_chunk, &err);
+
+        if ((err == json_tokener_success && array_mode == false) ||
+            (err != json_tokener_continue && err != json_tokener_success))
+            break;
+            
+        buf += current_chunk;
+        remaining -= current_chunk;
+    }
+
+    json_tokener_free(tok);
+
+    if (err)
+    {
+        if (err == json_tokener_continue)
+            err = json_tokener_error_parse_eof;
+
+        error = json_tokener_error_desc(err);
+        // In fuzzing, we don't print errors, just exercise the error path
+        (void)error;
+    }
+
+    // Exercise the resulting object if parsing succeeded
+    struct json_object *result = array ? array : obj;
+    if (result && !err)
+    {
+        // Exercise various JSON object operations
+        (void)json_object_get_type(result);
+        (void)json_object_to_json_string(result);
+        
+        // If it's an array, exercise array operations
+        if (array)
+        {
+            int len = json_object_array_length(array);
+            for (int i = 0; i < len && i < 10; i++) // Limit to avoid excessive processing
+            {
+                struct json_object *item = json_object_array_get_idx(array, i);
+                if (item)
+                {
+                    (void)json_object_get_type(item);
+                }
+            }
+        }
+        
+        json_object_put(result);
+    }
+}
+
+
+
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     if (size == 0) return 0;
     
     // Use first byte to determine fuzzing mode
-    uint8_t mode = data[0] % 4;
+    uint8_t mode = data[0] % 5;
     const uint8_t *fuzz_data = data + 1;
     size_t fuzz_size = size - 1;
     
@@ -232,6 +356,10 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
             
         case MODE_FULL_PIPELINE:
             fuzz_full_pipeline(fuzz_data, fuzz_size);
+            break;
+            
+        case MODE_JSON_PARSE:
+            fuzz_parse_json(fuzz_data, fuzz_size);
             break;
     }
     
